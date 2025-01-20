@@ -3,14 +3,11 @@ import mapboxgl from 'mapbox-gl';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { supabase } from "@/integrations/supabase/client";
 
 interface MapProps {
   transportMode: string;
 }
-
-// Default public token - this is a temporary token for development
-// In production, this should be replaced with your actual token
-const MAPBOX_TOKEN = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNldzNvYXQwMXVqMmtvMGw2ZjJ6YjQzIn0.qY4WrHzr0RaZhbVz6sLXDA';
 
 const Map = ({ transportMode }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -18,44 +15,55 @@ const Map = ({ transportMode }: MapProps) => {
   
   useEffect(() => {
     if (!mapContainer.current) return;
-    
-    const initializeMap = () => {
-      mapboxgl.accessToken = MAPBOX_TOKEN;
-      
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11',
-        center: [-74.006, 40.7128],
-        zoom: 12
-      });
 
-      // Add navigation controls
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    const initializeMap = async () => {
+      try {
+        const { data: { token }, error } = await supabase.functions.invoke('get-mapbox-token');
+        
+        if (error) {
+          console.error('Error fetching Mapbox token:', error);
+          return;
+        }
 
-      // Add geocoder controls
-      const geocoderStart = new MapboxGeocoder({
-        accessToken: MAPBOX_TOKEN,
-        mapboxgl: mapboxgl,
-        placeholder: 'Enter start location'
-      });
+        mapboxgl.accessToken = token || 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNldzNvYXQwMXVqMmtvMGw2ZjJ6YjQzIn0.qY4WrHzr0RaZhbVz6sLXDA';
+        
+        map.current = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: 'mapbox://styles/mapbox/light-v11',
+          center: [-74.006, 40.7128],
+          zoom: 12
+        });
 
-      const geocoderEnd = new MapboxGeocoder({
-        accessToken: MAPBOX_TOKEN,
-        mapboxgl: mapboxgl,
-        placeholder: 'Enter end location'
-      });
+        // Add navigation controls
+        map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-      document.getElementById('geocoder-start')?.appendChild(geocoderStart.onAdd(map.current));
-      document.getElementById('geocoder-end')?.appendChild(geocoderEnd.onAdd(map.current));
+        // Add geocoder controls
+        const geocoderStart = new MapboxGeocoder({
+          accessToken: mapboxgl.accessToken,
+          mapboxgl: mapboxgl as any,
+          placeholder: 'Enter start location'
+        });
 
-      // Handle location selections
-      geocoderStart.on('result', (e) => {
-        console.log('Start location:', e.result);
-      });
+        const geocoderEnd = new MapboxGeocoder({
+          accessToken: mapboxgl.accessToken,
+          mapboxgl: mapboxgl as any,
+          placeholder: 'Enter end location'
+        });
 
-      geocoderEnd.on('result', (e) => {
-        console.log('End location:', e.result);
-      });
+        document.getElementById('geocoder-start')?.appendChild(geocoderStart.onAdd(map.current));
+        document.getElementById('geocoder-end')?.appendChild(geocoderEnd.onAdd(map.current));
+
+        // Handle location selections
+        geocoderStart.on('result', (e) => {
+          console.log('Start location:', e.result);
+        });
+
+        geocoderEnd.on('result', (e) => {
+          console.log('End location:', e.result);
+        });
+      } catch (error) {
+        console.error('Error initializing map:', error);
+      }
     };
 
     initializeMap();
