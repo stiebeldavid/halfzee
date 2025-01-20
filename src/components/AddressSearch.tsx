@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Car, Walking, Bike, Train } from 'lucide-react';
+import { Car, PersonStanding, Bike, Bus } from 'lucide-react';
 
 interface AddressSearchProps {
   onTransportModeChange: (mode: string) => void;
@@ -39,7 +39,7 @@ const AddressSearch = ({ onTransportModeChange, transportMode }: AddressSearchPr
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="walking" id="walking" />
               <Label htmlFor="walking" className="flex items-center space-x-1">
-                <Walking className="w-4 h-4" />
+                <PersonStanding className="w-4 h-4" />
                 <span>Walk</span>
               </Label>
             </div>
@@ -55,7 +55,7 @@ const AddressSearch = ({ onTransportModeChange, transportMode }: AddressSearchPr
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="transit" id="transit" />
               <Label htmlFor="transit" className="flex items-center space-x-1">
-                <Train className="w-4 h-4" />
+                <Bus className="w-4 h-4" />
                 <span>Transit</span>
               </Label>
             </div>
