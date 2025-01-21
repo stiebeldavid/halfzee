@@ -22,6 +22,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
   const [endLocation, setEndLocation] = useState<[number, number] | null>(null);
   const [midpoint, setMidpoint] = useState<[number, number] | null>(null);
   const currentMarker = useRef<mapboxgl.Marker | null>(null);
+  const placeMarkers = useRef<mapboxgl.Marker[]>([]);
   
   const getDirections = async (start: [number, number], end: [number, number]) => {
     try {
@@ -52,6 +53,10 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       currentMarker.current.remove();
       currentMarker.current = null;
     }
+
+    // Remove all place markers
+    placeMarkers.current.forEach(marker => marker.remove());
+    placeMarkers.current = [];
   };
 
   const findEquidistantPoint = async (routeCoordinates: number[][]) => {
@@ -124,6 +129,68 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     });
   };
 
+  const searchNearbyPlaces = async (point: [number, number]) => {
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/restaurant%2Ccafe.json?` +
+        `proximity=${point[0]},${point[1]}&` +
+        `radius=1000&` +
+        `limit=10&` +
+        `types=poi&` +
+        `access_token=${mapboxgl.accessToken}`
+      );
+
+      const data = await response.json();
+      
+      // Clear existing place markers
+      placeMarkers.current.forEach(marker => marker.remove());
+      placeMarkers.current = [];
+
+      // Add new markers for each place
+      data.features.forEach((place: any) => {
+        const coordinates = place.center;
+        const name = place.text;
+        const category = place.properties.category || '';
+
+        // Create custom marker element
+        const el = document.createElement('div');
+        el.className = 'place-marker';
+        el.style.width = '20px';
+        el.style.height = '20px';
+        el.style.backgroundImage = category.toLowerCase().includes('coffee') || 
+                                 name.toLowerCase().includes('starbucks') ?
+          'url(https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png)' :
+          'url(https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png)';
+        el.style.backgroundSize = 'cover';
+        el.style.cursor = 'pointer';
+
+        // Create popup
+        const popup = new mapboxgl.Popup({ offset: 25 })
+          .setHTML(`<strong>${name}</strong><br>${category}`);
+
+        // Create and store marker
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat(coordinates)
+          .setPopup(popup)
+          .addTo(map.current!);
+
+        placeMarkers.current.push(marker);
+      });
+
+      toast({
+        title: "Places Found",
+        description: `Found ${data.features.length} places near the midpoint.`,
+      });
+    } catch (error) {
+      console.error('Error searching nearby places:', error);
+      toast({
+        title: "Error",
+        description: "Failed to find nearby places.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const findMidpoint = async () => {
     if (!startLocation || !endLocation) {
       toast({
@@ -135,7 +202,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     }
 
     try {
-      // Stop any ongoing animations or movements
+      // Stop any ongoing animations
       map.current?.stop();
       
       clearMapElements();
@@ -180,6 +247,9 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       currentMarker.current = new mapboxgl.Marker(markerElement)
         .setLngLat(equidistantPoint as [number, number])
         .addTo(map.current);
+
+      // Search for nearby places
+      await searchNearbyPlaces(equidistantPoint as [number, number]);
 
       // Calculate bounds that include all points
       const bounds = new mapboxgl.LngLatBounds();
