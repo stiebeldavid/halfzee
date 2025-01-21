@@ -12,6 +12,12 @@ interface AddressSearchProps {
 }
 
 const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint }: AddressSearchProps) => {
+  const handleFindMidpoint = () => {
+    if (onFindMidpoint) {
+      onFindMidpoint();
+    }
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto bg-white/90 backdrop-blur-sm">
       <CardHeader>
@@ -22,7 +28,7 @@ const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint }:
           <div id="geocoder-start" />
           <div id="geocoder-end" />
           <Button 
-            onClick={onFindMidpoint}
+            onClick={handleFindMidpoint}
             className="w-full"
             size="lg"
           >
