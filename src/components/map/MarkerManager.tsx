@@ -25,8 +25,13 @@ const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode,
     }
 
     try {
+      // Clear existing markers and routes
+      if (locations.currentMarker) {
+        locations.currentMarker.remove();
+      }
       clearMapElements(map, locations.currentMarker);
 
+      // Get route between points
       const directionsData = await getDirections(start, end, transportMode);
       if (!directionsData?.routes[0]) {
         toast({
@@ -37,9 +42,11 @@ const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode,
         return;
       }
 
+      // Draw the route
       const coordinates = directionsData.routes[0].geometry.coordinates;
       drawRoute(map, coordinates);
 
+      // Find the midpoint
       const equidistantPoint = await findEquidistantPoint(coordinates, start, end, transportMode);
       
       if (!equidistantPoint) {
@@ -51,6 +58,7 @@ const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode,
         return;
       }
 
+      // Create and add the midpoint marker
       const markerElement = document.createElement('div');
       markerElement.className = 'midpoint-marker';
       markerElement.style.width = '25px';
@@ -68,6 +76,7 @@ const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode,
         currentMarker: newMarker
       }));
 
+      // Fit the map to show all points
       const bounds = new mapboxgl.LngLatBounds();
       bounds.extend(start);
       bounds.extend(end);
