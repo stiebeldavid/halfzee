@@ -21,7 +21,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
   const [endLocation, setEndLocation] = useState<[number, number] | null>(null);
   const [midpoint, setMidpoint] = useState<[number, number] | null>(null);
   const currentMarker = useRef<mapboxgl.Marker | null>(null);
-  
+
   const getDirections = async (start: [number, number], end: [number, number]) => {
     try {
       const response = await fetch(
@@ -233,7 +233,6 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
         // Add navigation controls
         map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-        // Instead of passing the entire mapboxgl instance, pass only the necessary data
         if (onGeocoder) {
           onGeocoder({
             accessToken: mapboxgl.accessToken,
@@ -248,7 +247,13 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
     initializeMap();
 
     return () => {
-      map.current?.remove();
+      if (map.current) {
+        try {
+          map.current.remove();
+        } catch (error) {
+          console.error('Error removing map:', error);
+        }
+      }
     };
   }, [onGeocoder]);
 

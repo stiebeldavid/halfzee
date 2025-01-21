@@ -5,7 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Car, PersonStanding, Bike, Bus, Locate } from 'lucide-react';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-css';
+import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 
 interface AddressSearchProps {
   onTransportModeChange: (mode: string) => void;
@@ -26,13 +26,13 @@ const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint, m
 
     const startGeocoder = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: { Map: mapboxgl.mapInstance.constructor },
+      mapboxgl: mapboxgl.mapInstance.constructor.prototype,
       placeholder: 'Enter start location'
     });
 
     const endGeocoder = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: { Map: mapboxgl.mapInstance.constructor },
+      mapboxgl: mapboxgl.mapInstance.constructor.prototype,
       placeholder: 'Enter end location'
     });
 
@@ -50,8 +50,12 @@ const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint, m
     }
 
     return () => {
-      startGeocoder.onRemove();
-      endGeocoder.onRemove();
+      if (startGeocoder && startGeocoder.onRemove) {
+        startGeocoder.onRemove();
+      }
+      if (endGeocoder && endGeocoder.onRemove) {
+        endGeocoder.onRemove();
+      }
     };
   }, [mapboxgl]);
 
