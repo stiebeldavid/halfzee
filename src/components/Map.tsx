@@ -131,6 +131,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
 
   const searchNearbyPlaces = async (point: [number, number]) => {
     try {
+      console.log('Searching for places near:', point);
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/restaurant%2Ccafe.json?` +
         `proximity=${point[0]},${point[1]}&` +
@@ -141,6 +142,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       );
 
       const data = await response.json();
+      console.log('Places API response:', data);
       
       // Clear existing place markers
       placeMarkers.current.forEach(marker => marker.remove());
@@ -151,6 +153,8 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         const coordinates = place.center;
         const name = place.text;
         const category = place.properties.category || '';
+        
+        console.log('Adding marker for place:', { name, category, coordinates });
 
         // Create custom marker element
         const el = document.createElement('div');
@@ -252,10 +256,12 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       await searchNearbyPlaces(equidistantPoint as [number, number]);
 
       // Calculate bounds that include all points
-      const bounds = new mapboxgl.LngLatBounds();
-      bounds.extend(startLocation);
-      bounds.extend(endLocation);
-      bounds.extend(equidistantPoint as [number, number]);
+      const bounds = new mapboxgl.LngLatBounds(
+        [Math.min(startLocation[0], endLocation[0], equidistantPoint[0]), 
+         Math.min(startLocation[1], endLocation[1], equidistantPoint[1])],
+        [Math.max(startLocation[0], endLocation[0], equidistantPoint[0]),
+         Math.max(startLocation[1], endLocation[1], equidistantPoint[1])]
+      );
 
       // Stop any ongoing animations before fitting bounds
       map.current.stop();
