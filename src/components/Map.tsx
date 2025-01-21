@@ -190,25 +190,30 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       // Stop any ongoing animations before fitting bounds
       map.current.stop();
 
+      // Remove any existing moveend listeners
+      map.current.off('moveend');
+
+      // Add one-time moveend listener for the first animation
+      map.current.once('moveend', () => {
+        // After centering, fit bounds to show all points
+        map.current?.fitBounds(bounds, {
+          padding: {
+            top: 50,
+            bottom: 50,
+            left: 450,
+            right: 50
+          },
+          maxZoom: 15,
+          duration: 1000
+        });
+      });
+
       // Center the map on the midpoint first with an animation
       map.current.easeTo({
         center: equidistantPoint as [number, number],
         zoom: 12,
         duration: 1000,
-        easing: (t) => t * (2 - t), // Ease out quad
-        complete: () => {
-          // After centering, fit bounds to show all points
-          map.current?.fitBounds(bounds, {
-            padding: {
-              top: 50,
-              bottom: 50,
-              left: 450,
-              right: 50
-            },
-            maxZoom: 15,
-            duration: 1000
-          });
-        }
+        easing: (t) => t * (2 - t) // Ease out quad
       });
 
       if (onMidpointFound) {
