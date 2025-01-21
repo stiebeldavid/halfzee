@@ -41,7 +41,7 @@
 }
 
 .mapboxgl-ctrl-geocoder--input {
-  @apply !h-10 !px-3 !py-2 !text-sm;
+  @apply !h-10 !px-3 !py-2 !text-sm !pl-10;
 }
 
 .mapboxgl-ctrl-geocoder--icon {
@@ -49,7 +49,7 @@
 }
 
 .mapboxgl-ctrl-geocoder--icon-search {
-  @apply !top-2;
+  @apply !top-2 !left-2;
 }
 
 .mapboxgl-ctrl-geocoder--suggestion {
