@@ -265,7 +265,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         // Add navigation controls
         map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-        // Add geocoder controls
+        // Create geocoder controls without adding them to the map
         const geocoderStart = new MapboxGeocoder({
           accessToken: mapboxgl.accessToken,
           mapboxgl: mapboxgl as any,
@@ -278,8 +278,14 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
           placeholder: 'Enter end location'
         });
 
-        document.getElementById('geocoder-start')?.appendChild(geocoderStart.onAdd(map.current));
-        document.getElementById('geocoder-end')?.appendChild(geocoderEnd.onAdd(map.current));
+        // Add geocoders only to the designated divs
+        const startContainer = document.getElementById('geocoder-start');
+        const endContainer = document.getElementById('geocoder-end');
+        
+        if (startContainer && endContainer) {
+          startContainer.appendChild(geocoderStart.onAdd(map.current));
+          endContainer.appendChild(geocoderEnd.onAdd(map.current));
+        }
 
         // Handle location selections
         geocoderStart.on('result', (e) => {
