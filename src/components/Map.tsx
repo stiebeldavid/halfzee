@@ -18,14 +18,21 @@ const Map = ({ transportMode }: MapProps) => {
 
     const initializeMap = async () => {
       try {
-        const { data: { token }, error } = await supabase.functions.invoke('get-mapbox-token');
+        console.log('Fetching Mapbox token...');
+        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
         
         if (error) {
           console.error('Error fetching Mapbox token:', error);
           return;
         }
 
-        mapboxgl.accessToken = token || 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNldzNvYXQwMXVqMmtvMGw2ZjJ6YjQzIn0.qY4WrHzr0RaZhbVz6sLXDA';
+        if (!data?.token) {
+          console.error('No token received from edge function');
+          return;
+        }
+
+        console.log('Token received successfully');
+        mapboxgl.accessToken = data.token;
         
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
