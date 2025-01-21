@@ -42,33 +42,33 @@
 }
 
 .mapboxgl-ctrl-geocoder {
-  @apply !w-full !max-w-none !shadow-none !border !border-input !bg-background !rounded-md;
+  @apply w-full min-w-full max-w-full shadow-none rounded-md border border-input bg-background;
 }
 
 .mapboxgl-ctrl-geocoder--input {
-  @apply !h-10 !px-3 !py-2 !text-sm !pl-10;
+  @apply h-10 px-3 py-2 text-sm pl-10 w-full;
 }
 
 .mapboxgl-ctrl-geocoder--icon {
-  @apply !top-2;
+  @apply top-2;
 }
 
 .mapboxgl-ctrl-geocoder--icon-search {
-  @apply !top-2 !left-2;
+  @apply top-2 left-2;
 }
 
 .mapboxgl-ctrl-geocoder--button {
-  @apply !top-1;
+  @apply top-1;
 }
 
 .mapboxgl-ctrl-geocoder--suggestion {
-  @apply !text-sm;
+  @apply text-sm;
 }
 
 .mapboxgl-ctrl-geocoder--suggestion-title {
-  @apply !font-medium;
+  @apply font-medium;
 }
 
 .mapboxgl-ctrl-geocoder--suggestion-address {
-  @apply !text-sm !text-muted-foreground;
+  @apply text-sm text-muted-foreground;
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import mapboxgl from 'mapbox-gl';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
@@ -10,25 +10,28 @@ interface MapControlsProps {
 }
 
 const MapControls = ({ map, onStartLocationSelect, onEndLocationSelect }: MapControlsProps) => {
-  React.useEffect(() => {
-    // Create geocoder controls
+  useEffect(() => {
     const geocoderStart = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl as any,
+      mapboxgl: mapboxgl,
+      marker: false,
       placeholder: 'Enter start location'
     });
 
     const geocoderEnd = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl as any,
+      mapboxgl: mapboxgl,
+      marker: false,
       placeholder: 'Enter end location'
     });
 
-    // Add geocoders to the designated divs
+    // Add geocoders to their containers
     const startContainer = document.getElementById('geocoder-start');
     const endContainer = document.getElementById('geocoder-end');
-    
+
     if (startContainer && endContainer) {
+      startContainer.innerHTML = '';
+      endContainer.innerHTML = '';
       startContainer.appendChild(geocoderStart.onAdd(map));
       endContainer.appendChild(geocoderEnd.onAdd(map));
     }
