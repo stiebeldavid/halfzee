@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import mapboxgl from 'mapbox-gl';
+import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
+import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -7,22 +9,20 @@ import { toast } from "@/components/ui/use-toast";
 interface MapProps {
   transportMode: string;
   onMidpointFound?: (midpoint: [number, number]) => void;
-  onGeocoder?: (geocoder: any) => void;
 }
 
 export interface MapRef {
   findMidpoint: () => void;
 }
 
-const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGeocoder }, ref) => {
+const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [startLocation, setStartLocation] = useState<[number, number] | null>(null);
   const [endLocation, setEndLocation] = useState<[number, number] | null>(null);
   const [midpoint, setMidpoint] = useState<[number, number] | null>(null);
   const currentMarker = useRef<mapboxgl.Marker | null>(null);
-  const [mapInitialized, setMapInitialized] = useState(false);
-
+  
   const getDirections = async (start: [number, number], end: [number, number]) => {
     try {
       const response = await fetch(
@@ -202,7 +202,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
       });
     }
   };
-
+  
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -224,8 +224,6 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
         console.log('Token received successfully');
         mapboxgl.accessToken = data.token;
         
-        if (map.current) return;
-
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
           style: 'mapbox://styles/mapbox/light-v11',
@@ -233,18 +231,37 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
           zoom: 12
         });
 
-        map.current.on('load', () => {
-          setMapInitialized(true);
-          if (onGeocoder) {
-            onGeocoder({
-              accessToken: mapboxgl.accessToken,
-              mapInstance: mapboxgl
-            });
-          }
-        });
-
         // Add navigation controls
         map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+        // Add geocoder controls
+        const geocoderStart = new MapboxGeocoder({
+          accessToken: mapboxgl.accessToken,
+          mapboxgl: mapboxgl as any,
+          placeholder: 'Enter start location'
+        });
+
+        const geocoderEnd = new MapboxGeocoder({
+          accessToken: mapboxgl.accessToken,
+          mapboxgl: mapboxgl as any,
+          placeholder: 'Enter end location'
+        });
+
+        document.getElementById('geocoder-start')?.appendChild(geocoderStart.onAdd(map.current));
+        document.getElementById('geocoder-end')?.appendChild(geocoderEnd.onAdd(map.current));
+
+        // Handle location selections
+        geocoderStart.on('result', (e) => {
+          console.log('Start location:', e.result);
+          const coordinates = e.result.geometry.coordinates as [number, number];
+          setStartLocation(coordinates);
+        });
+
+        geocoderEnd.on('result', (e) => {
+          console.log('End location:', e.result);
+          const coordinates = e.result.geometry.coordinates as [number, number];
+          setEndLocation(coordinates);
+        });
       } catch (error) {
         console.error('Error initializing map:', error);
       }
@@ -253,16 +270,11 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
     initializeMap();
 
     return () => {
-      if (map.current) {
-        try {
-          map.current.remove();
-        } catch (error) {
-          console.error('Error removing map:', error);
-        }
-      }
+      map.current?.remove();
     };
-  }, [onGeocoder]);
+  }, []);
 
+  // Expose findMidpoint method to parent component
   useImperativeHandle(ref, () => ({
     findMidpoint
   }));
