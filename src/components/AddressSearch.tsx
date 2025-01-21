@@ -25,8 +25,8 @@ const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint }:
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <div id="geocoder-start" />
-          <div id="geocoder-end" />
+          <div id="geocoder-start" className="geocoder-container" />
+          <div id="geocoder-end" className="geocoder-container" />
           <Button 
             onClick={onFindMidpoint}
             className="w-full"
