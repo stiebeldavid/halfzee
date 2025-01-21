@@ -21,6 +21,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
   const [startLocation, setStartLocation] = useState<[number, number] | null>(null);
   const [endLocation, setEndLocation] = useState<[number, number] | null>(null);
   const [midpoint, setMidpoint] = useState<[number, number] | null>(null);
+  const currentMarker = useRef<mapboxgl.Marker | null>(null);
   
   const getDirections = async (start: [number, number], end: [number, number]) => {
     try {
@@ -32,6 +33,24 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     } catch (error) {
       console.error('Error fetching directions:', error);
       return null;
+    }
+  };
+
+  const clearMapElements = () => {
+    if (!map.current) return;
+
+    // Remove existing route layer and source
+    if (map.current.getLayer('route')) {
+      map.current.removeLayer('route');
+    }
+    if (map.current.getSource('route')) {
+      map.current.removeSource('route');
+    }
+
+    // Remove existing midpoint marker
+    if (currentMarker.current) {
+      currentMarker.current.remove();
+      currentMarker.current = null;
     }
   };
 
@@ -75,11 +94,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
   const drawRoute = (coordinates: number[][]) => {
     if (!map.current) return;
 
-    // Remove existing route layer if it exists
-    if (map.current.getSource('route')) {
-      map.current.removeLayer('route');
-      map.current.removeSource('route');
-    }
+    clearMapElements();
 
     // Add the route to the map
     map.current.addSource('route', {
@@ -120,6 +135,8 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     }
 
     try {
+      clearMapElements();
+
       // Get route directions
       const directionsData = await getDirections(startLocation, endLocation);
       if (!directionsData?.routes[0]) {
@@ -148,12 +165,6 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       }
 
       setMidpoint(equidistantPoint as [number, number]);
-      
-      // Remove existing midpoint marker if it exists
-      const existingMarker = document.querySelector('.midpoint-marker');
-      if (existingMarker) {
-        existingMarker.remove();
-      }
 
       // Add marker at midpoint
       const markerElement = document.createElement('div');
@@ -163,7 +174,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       markerElement.style.backgroundImage = 'url(https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png)';
       markerElement.style.backgroundSize = 'cover';
       
-      new mapboxgl.Marker(markerElement)
+      currentMarker.current = new mapboxgl.Marker(markerElement)
         .setLngLat(equidistantPoint as [number, number])
         .addTo(map.current);
 
