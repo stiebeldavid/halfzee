@@ -21,6 +21,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
   const [endLocation, setEndLocation] = useState<[number, number] | null>(null);
   const [midpoint, setMidpoint] = useState<[number, number] | null>(null);
   const currentMarker = useRef<mapboxgl.Marker | null>(null);
+  const [mapInitialized, setMapInitialized] = useState(false);
 
   const getDirections = async (start: [number, number], end: [number, number]) => {
     try {
@@ -223,6 +224,8 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
         console.log('Token received successfully');
         mapboxgl.accessToken = data.token;
         
+        if (map.current) return;
+
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
           style: 'mapbox://styles/mapbox/light-v11',
@@ -230,15 +233,18 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
           zoom: 12
         });
 
+        map.current.on('load', () => {
+          setMapInitialized(true);
+          if (onGeocoder) {
+            onGeocoder({
+              accessToken: mapboxgl.accessToken,
+              mapInstance: mapboxgl
+            });
+          }
+        });
+
         // Add navigation controls
         map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-        if (onGeocoder) {
-          onGeocoder({
-            accessToken: mapboxgl.accessToken,
-            mapInstance: map.current
-          });
-        }
       } catch (error) {
         console.error('Error initializing map:', error);
       }
@@ -257,7 +263,6 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
     };
   }, [onGeocoder]);
 
-  // Expose findMidpoint method to parent component
   useImperativeHandle(ref, () => ({
     findMidpoint
   }));

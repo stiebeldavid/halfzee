@@ -22,17 +22,28 @@ const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint, m
   const [geocoderEnd, setGeocoderEnd] = useState<any>(null);
 
   useEffect(() => {
-    if (!mapboxgl?.accessToken || !mapboxgl?.mapInstance || geocoderStart || geocoderEnd) return;
+    if (!mapboxgl?.accessToken || !mapboxgl?.mapInstance) return;
+
+    const cleanup = () => {
+      if (geocoderStart && geocoderStart.onRemove) {
+        geocoderStart.onRemove();
+      }
+      if (geocoderEnd && geocoderEnd.onRemove) {
+        geocoderEnd.onRemove();
+      }
+    };
+
+    cleanup();
 
     const startGeocoder = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl.mapInstance.constructor.prototype,
+      mapboxgl: mapboxgl.mapInstance,
       placeholder: 'Enter start location'
     });
 
     const endGeocoder = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl.mapInstance.constructor.prototype,
+      mapboxgl: mapboxgl.mapInstance,
       placeholder: 'Enter end location'
     });
 
@@ -49,14 +60,7 @@ const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint, m
       endContainer.appendChild(endGeocoder.onAdd(mapboxgl.mapInstance));
     }
 
-    return () => {
-      if (startGeocoder && startGeocoder.onRemove) {
-        startGeocoder.onRemove();
-      }
-      if (endGeocoder && endGeocoder.onRemove) {
-        endGeocoder.onRemove();
-      }
-    };
+    return cleanup;
   }, [mapboxgl]);
 
   return (
@@ -66,8 +70,8 @@ const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint, m
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <div id="geocoder-start" />
-          <div id="geocoder-end" />
+          <div id="geocoder-start" className="geocoder-container" />
+          <div id="geocoder-end" className="geocoder-container" />
           <Button 
             onClick={onFindMidpoint}
             className="w-full"
