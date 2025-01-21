@@ -5,13 +5,16 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Car, PersonStanding, Bike, Bus, Locate } from 'lucide-react';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
+import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-css';
 
 interface AddressSearchProps {
   onTransportModeChange: (mode: string) => void;
   transportMode: string;
   onFindMidpoint?: () => void;
-  mapboxgl?: any;
+  mapboxgl?: {
+    accessToken: string;
+    mapInstance: any;
+  };
 }
 
 const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint, mapboxgl }: AddressSearchProps) => {
@@ -19,17 +22,17 @@ const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint, m
   const [geocoderEnd, setGeocoderEnd] = useState<any>(null);
 
   useEffect(() => {
-    if (!mapboxgl || geocoderStart || geocoderEnd) return;
+    if (!mapboxgl?.accessToken || !mapboxgl?.mapInstance || geocoderStart || geocoderEnd) return;
 
     const startGeocoder = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl,
+      mapboxgl: { Map: mapboxgl.mapInstance.constructor },
       placeholder: 'Enter start location'
     });
 
     const endGeocoder = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl,
+      mapboxgl: { Map: mapboxgl.mapInstance.constructor },
       placeholder: 'Enter end location'
     });
 
@@ -42,8 +45,8 @@ const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint, m
     if (startContainer && endContainer) {
       startContainer.innerHTML = '';
       endContainer.innerHTML = '';
-      startContainer.appendChild(startGeocoder.onAdd(mapboxgl));
-      endContainer.appendChild(endGeocoder.onAdd(mapboxgl));
+      startContainer.appendChild(startGeocoder.onAdd(mapboxgl.mapInstance));
+      endContainer.appendChild(endGeocoder.onAdd(mapboxgl.mapInstance));
     }
 
     return () => {

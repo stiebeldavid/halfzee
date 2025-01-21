@@ -233,8 +233,12 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound, onGe
         // Add navigation controls
         map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
+        // Instead of passing the entire mapboxgl instance, pass only the necessary data
         if (onGeocoder) {
-          onGeocoder(mapboxgl);
+          onGeocoder({
+            accessToken: mapboxgl.accessToken,
+            mapInstance: map.current
+          });
         }
       } catch (error) {
         console.error('Error initializing map:', error);
