@@ -1,10 +1,10 @@
 import React, { useRef } from 'react';
-import Map from '@/components/Map';
+import Map, { MapRef } from '@/components/Map';
 import AddressSearch from '@/components/AddressSearch';
 
 const Index = () => {
   const [transportMode, setTransportMode] = React.useState('driving');
-  const mapRef = useRef<{ findMidpoint: () => void }>(null);
+  const mapRef = useRef<MapRef>(null);
 
   const handleFindMidpoint = () => {
     mapRef.current?.findMidpoint();

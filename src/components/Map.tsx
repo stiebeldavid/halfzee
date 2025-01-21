@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
@@ -11,7 +11,11 @@ interface MapProps {
   onMidpointFound?: (midpoint: [number, number]) => void;
 }
 
-const Map = ({ transportMode, onMidpointFound }: MapProps) => {
+export interface MapRef {
+  findMidpoint: () => void;
+}
+
+const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [startLocation, setStartLocation] = useState<[number, number] | null>(null);
@@ -148,19 +152,17 @@ const Map = ({ transportMode, onMidpointFound }: MapProps) => {
   }, []);
 
   // Expose findMidpoint method to parent component
-  React.useImperativeHandle(
-    ref,
-    () => ({
-      findMidpoint
-    }),
-    [startLocation, endLocation]
-  );
+  useImperativeHandle(ref, () => ({
+    findMidpoint
+  }));
 
   return (
     <div className="absolute inset-0">
       <div ref={mapContainer} className="w-full h-full" />
     </div>
   );
-};
+});
+
+Map.displayName = 'Map';
 
 export default Map;
