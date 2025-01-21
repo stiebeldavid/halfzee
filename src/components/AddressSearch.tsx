@@ -1,17 +1,57 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Car, PersonStanding, Bike, Bus, Locate } from 'lucide-react';
+import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
+import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 
 interface AddressSearchProps {
   onTransportModeChange: (mode: string) => void;
   transportMode: string;
   onFindMidpoint?: () => void;
+  mapboxgl?: any;
 }
 
-const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint }: AddressSearchProps) => {
+const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint, mapboxgl }: AddressSearchProps) => {
+  const [geocoderStart, setGeocoderStart] = useState<any>(null);
+  const [geocoderEnd, setGeocoderEnd] = useState<any>(null);
+
+  useEffect(() => {
+    if (!mapboxgl || geocoderStart || geocoderEnd) return;
+
+    const startGeocoder = new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      mapboxgl: mapboxgl,
+      placeholder: 'Enter start location'
+    });
+
+    const endGeocoder = new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      mapboxgl: mapboxgl,
+      placeholder: 'Enter end location'
+    });
+
+    setGeocoderStart(startGeocoder);
+    setGeocoderEnd(endGeocoder);
+
+    const startContainer = document.getElementById('geocoder-start');
+    const endContainer = document.getElementById('geocoder-end');
+
+    if (startContainer && endContainer) {
+      startContainer.innerHTML = '';
+      endContainer.innerHTML = '';
+      startContainer.appendChild(startGeocoder.onAdd(mapboxgl));
+      endContainer.appendChild(endGeocoder.onAdd(mapboxgl));
+    }
+
+    return () => {
+      startGeocoder.onRemove();
+      endGeocoder.onRemove();
+    };
+  }, [mapboxgl]);
+
   return (
     <Card className="w-full max-w-md mx-auto bg-white/90 backdrop-blur-sm">
       <CardHeader>
