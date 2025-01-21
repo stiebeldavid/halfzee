@@ -2,14 +2,16 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Car, PersonStanding, Bike, Bus } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Car, PersonStanding, Bike, Bus, Locate } from 'lucide-react';
 
 interface AddressSearchProps {
   onTransportModeChange: (mode: string) => void;
   transportMode: string;
+  onFindMidpoint?: () => void;
 }
 
-const AddressSearch = ({ onTransportModeChange, transportMode }: AddressSearchProps) => {
+const AddressSearch = ({ onTransportModeChange, transportMode, onFindMidpoint }: AddressSearchProps) => {
   return (
     <Card className="w-full max-w-md mx-auto bg-white/90 backdrop-blur-sm">
       <CardHeader>
@@ -19,6 +21,14 @@ const AddressSearch = ({ onTransportModeChange, transportMode }: AddressSearchPr
         <div className="space-y-4">
           <div id="geocoder-start" />
           <div id="geocoder-end" />
+          <Button 
+            onClick={onFindMidpoint}
+            className="w-full"
+            size="lg"
+          >
+            <Locate className="mr-2 h-4 w-4" />
+            Find Midpoint
+          </Button>
         </div>
         
         <div className="space-y-2">
