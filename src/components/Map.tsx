@@ -178,11 +178,21 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         .setLngLat(equidistantPoint as [number, number])
         .addTo(map.current);
 
-      // Fly to midpoint
-      map.current.flyTo({
-        center: equidistantPoint as [number, number],
-        zoom: 13,
-        essential: true
+      // Calculate bounds that include all points
+      const bounds = new mapboxgl.LngLatBounds();
+      bounds.extend(startLocation);
+      bounds.extend(endLocation);
+      bounds.extend(equidistantPoint as [number, number]);
+
+      // Add padding to account for the input box (more padding on the left)
+      map.current.fitBounds(bounds, {
+        padding: {
+          top: 50,
+          bottom: 50,
+          left: 450, // Extra padding for the input box
+          right: 50
+        },
+        maxZoom: 15
       });
 
       if (onMidpointFound) {
