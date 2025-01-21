@@ -22,27 +22,132 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
   const [endLocation, setEndLocation] = useState<[number, number] | null>(null);
   const [midpoint, setMidpoint] = useState<[number, number] | null>(null);
   
-  const calculateMidpoint = () => {
+  const getDirections = async (start: [number, number], end: [number, number]) => {
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/${transportMode}/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
+      );
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching directions:', error);
+      return null;
+    }
+  };
+
+  const findEquidistantPoint = async (routeCoordinates: number[][]) => {
+    // Sample 100 points along the route
+    const samples = 100;
+    const sampledPoints = [];
+    const totalPoints = routeCoordinates.length;
+    
+    for (let i = 0; i < samples; i++) {
+      const index = Math.floor((i / samples) * totalPoints);
+      sampledPoints.push(routeCoordinates[index]);
+    }
+
+    // For each sampled point, calculate travel times from both start and end
+    const travelTimes = await Promise.all(
+      sampledPoints.map(async (point) => {
+        if (!startLocation || !endLocation) return null;
+        
+        const startTime = await getDirections(startLocation, [point[0], point[1]])
+          .then(data => data?.routes[0]?.duration || 0);
+        const endTime = await getDirections([point[0], point[1]], endLocation)
+          .then(data => data?.routes[0]?.duration || 0);
+          
+        return {
+          point,
+          timeDifference: Math.abs(startTime - endTime),
+          totalTime: startTime + endTime
+        };
+      })
+    );
+
+    // Find the point with the smallest time difference
+    const bestPoint = travelTimes
+      .filter(Boolean)
+      .sort((a, b) => a!.timeDifference - b!.timeDifference)[0];
+
+    return bestPoint?.point || null;
+  };
+
+  const drawRoute = (coordinates: number[][]) => {
+    if (!map.current) return;
+
+    // Remove existing route layer if it exists
+    if (map.current.getSource('route')) {
+      map.current.removeLayer('route');
+      map.current.removeSource('route');
+    }
+
+    // Add the route to the map
+    map.current.addSource('route', {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: coordinates
+        }
+      }
+    });
+
+    map.current.addLayer({
+      id: 'route',
+      type: 'line',
+      source: 'route',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#3b82f6',
+        'line-width': 4
+      }
+    });
+  };
+
+  const findMidpoint = async () => {
     if (!startLocation || !endLocation) {
       toast({
         title: "Missing Locations",
         description: "Please select both start and end locations first.",
         variant: "destructive"
       });
-      return null;
+      return;
     }
 
-    const mid: [number, number] = [
-      (startLocation[0] + endLocation[0]) / 2,
-      (startLocation[1] + endLocation[1]) / 2
-    ];
-    return mid;
-  };
+    try {
+      // Get route directions
+      const directionsData = await getDirections(startLocation, endLocation);
+      if (!directionsData?.routes[0]) {
+        toast({
+          title: "Route Error",
+          description: "Could not find a route between the selected locations.",
+          variant: "destructive"
+        });
+        return;
+      }
 
-  const findMidpoint = () => {
-    const mid = calculateMidpoint();
-    if (mid && map.current) {
-      setMidpoint(mid);
+      // Draw the route on the map
+      const coordinates = directionsData.routes[0].geometry.coordinates;
+      drawRoute(coordinates);
+
+      // Find the equidistant point along the route
+      const equidistantPoint = await findEquidistantPoint(coordinates);
+      
+      if (!equidistantPoint || !map.current) {
+        toast({
+          title: "Error",
+          description: "Could not find an equidistant point.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setMidpoint(equidistantPoint as [number, number]);
       
       // Remove existing midpoint marker if it exists
       const existingMarker = document.querySelector('.midpoint-marker');
@@ -59,23 +164,30 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       markerElement.style.backgroundSize = 'cover';
       
       new mapboxgl.Marker(markerElement)
-        .setLngLat(mid)
+        .setLngLat(equidistantPoint as [number, number])
         .addTo(map.current);
 
       // Fly to midpoint
       map.current.flyTo({
-        center: mid,
+        center: equidistantPoint as [number, number],
         zoom: 13,
         essential: true
       });
 
       if (onMidpointFound) {
-        onMidpointFound(mid);
+        onMidpointFound(equidistantPoint as [number, number]);
       }
 
       toast({
         title: "Midpoint Found!",
-        description: "The map has been centered on the midpoint between your locations.",
+        description: "The map has been centered on the equidistant point between your locations.",
+      });
+    } catch (error) {
+      console.error('Error finding midpoint:', error);
+      toast({
+        title: "Error",
+        description: "An error occurred while finding the midpoint.",
+        variant: "destructive"
       });
     }
   };
