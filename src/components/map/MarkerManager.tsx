@@ -2,7 +2,14 @@ import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'rea
 import mapboxgl from 'mapbox-gl';
 import { toast } from "@/components/ui/use-toast";
 import { MarkerManagerProps, LocationState } from './types';
-import { getDirections, findEquidistantPoint, clearMapElements, drawRoute } from '@/utils/mapUtils';
+import { 
+  getDirections, 
+  findEquidistantPoint, 
+  clearMapElements, 
+  drawRoute,
+  searchNearbyPOIs,
+  createPOIMarker
+} from '@/utils/mapUtils';
 
 const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode, onMidpointFound }, ref) => {
   const [locations, setLocations] = useState<LocationState>({
@@ -11,6 +18,39 @@ const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode,
     midpoint: null,
     currentMarker: null
   });
+  const [poiMarkers, setPoiMarkers] = useState<mapboxgl.Marker[]>([]);
+
+  const clearPOIMarkers = () => {
+    poiMarkers.forEach(marker => marker.remove());
+    setPoiMarkers([]);
+  };
+
+  const findNearbyPOIs = async (coordinates: [number, number]) => {
+    try {
+      clearPOIMarkers();
+      
+      const categories: Array<'cafe' | 'park' | 'shopping'> = ['cafe', 'park', 'shopping'];
+      const newMarkers: mapboxgl.Marker[] = [];
+
+      for (const category of categories) {
+        const pois = await searchNearbyPOIs(coordinates, category);
+        
+        pois.forEach(poi => {
+          const marker = createPOIMarker(map, poi, category);
+          newMarkers.push(marker);
+        });
+      }
+
+      setPoiMarkers(newMarkers);
+    } catch (error) {
+      console.error('Error finding POIs:', error);
+      toast({
+        title: "Error",
+        description: "Could not find nearby points of interest.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const findMidpoint = async () => {
     const { start, end } = locations;
@@ -26,6 +66,7 @@ const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode,
 
     try {
       clearMapElements(map, locations.currentMarker);
+      clearPOIMarkers();
 
       const directionsData = await getDirections(start, end, transportMode);
       if (!directionsData?.routes[0]) {
@@ -68,6 +109,9 @@ const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode,
         currentMarker: newMarker
       }));
 
+      // Find and display nearby POIs
+      await findNearbyPOIs(equidistantPoint as [number, number]);
+
       const bounds = new mapboxgl.LngLatBounds();
       bounds.extend(start);
       bounds.extend(end);
@@ -89,7 +133,7 @@ const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode,
 
       toast({
         title: "Midpoint Found!",
-        description: "The map has been centered on the equidistant point between your locations.",
+        description: "The map has been centered on the equidistant point and nearby points of interest have been marked.",
       });
     } catch (error) {
       console.error('Error finding midpoint:', error);
@@ -116,6 +160,7 @@ const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode,
       if (locations.currentMarker) {
         locations.currentMarker.remove();
       }
+      clearPOIMarkers();
     };
   }, []);
 
