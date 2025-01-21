@@ -133,12 +133,22 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     try {
       console.log('Searching for places near:', point);
       
-      // Use proper category filters for restaurants and cafes
+      // Calculate a bounding box around the midpoint (roughly 2km radius)
+      const radius = 2; // 2 kilometers in decimal degrees (approximately)
+      const bbox = [
+        point[0] - radius,  // min longitude
+        point[1] - radius,  // min latitude
+        point[0] + radius,  // max longitude
+        point[1] + radius   // max latitude
+      ].join(',');
+
+      // Use proper category filters for restaurants and cafes with bbox
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/restaurant%2Ccafe.json?` +
         `proximity=${point[0]},${point[1]}&` +
-        `radius=2000&` +
+        `bbox=${bbox}&` +
         `limit=10&` +
+        `types=poi&` +
         `categories=restaurant,cafe,coffee_shop&` +
         `access_token=${mapboxgl.accessToken}`
       );
@@ -147,7 +157,11 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       console.log('Places API response:', data);
       
       if (!data.features || data.features.length === 0) {
-        console.log('No places found within radius. Try increasing search radius or checking coordinates.');
+        console.log('No places found within radius. Search parameters:', {
+          point,
+          bbox,
+          categories: 'restaurant,cafe,coffee_shop'
+        });
         toast({
           title: "No Places Found",
           description: "No restaurants or cafes were found near the midpoint. Try a different location.",
@@ -230,6 +244,21 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         variant: "destructive"
       });
     }
+  };
+
+  // Helper function to calculate distance between two points
+  const calculateDistance = (point1: [number, number], point2: number[]) => {
+    const R = 6371; // Earth's radius in km
+    const lat1 = point1[1] * Math.PI / 180;
+    const lat2 = point2[1] * Math.PI / 180;
+    const deltaLat = (point2[1] - point1[1]) * Math.PI / 180;
+    const deltaLon = (point2[0] - point1[0]) * Math.PI / 180;
+
+    const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+              Math.cos(lat1) * Math.cos(lat2) *
+              Math.sin(deltaLon/2) * Math.sin(deltaLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in km
   };
 
   const findMidpoint = async () => {
