@@ -105,4 +105,5 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
 
 Map.displayName = 'Map';
 
+export { type MapRef };
 export default Map;

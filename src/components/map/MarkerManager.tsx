@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { toast } from "@/components/ui/use-toast";
 import { MarkerManagerProps, LocationState } from './types';
 import { getDirections, findEquidistantPoint, clearMapElements, drawRoute } from '@/utils/mapUtils';
 
-const MarkerManager: React.FC<MarkerManagerProps> = ({ map, transportMode, onMidpointFound }) => {
+const MarkerManager = forwardRef<any, MarkerManagerProps>(({ map, transportMode, onMidpointFound }, ref) => {
   const [locations, setLocations] = useState<LocationState>({
     start: null,
     end: null,
@@ -101,6 +101,16 @@ const MarkerManager: React.FC<MarkerManagerProps> = ({ map, transportMode, onMid
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    findMidpoint,
+    setStartLocation: (coordinates: [number, number]) => {
+      setLocations(prev => ({ ...prev, start: coordinates }));
+    },
+    setEndLocation: (coordinates: [number, number]) => {
+      setLocations(prev => ({ ...prev, end: coordinates }));
+    }
+  }));
+
   useEffect(() => {
     return () => {
       if (locations.currentMarker) {
@@ -110,6 +120,8 @@ const MarkerManager: React.FC<MarkerManagerProps> = ({ map, transportMode, onMid
   }, []);
 
   return null;
-};
+});
+
+MarkerManager.displayName = 'MarkerManager';
 
 export default MarkerManager;
