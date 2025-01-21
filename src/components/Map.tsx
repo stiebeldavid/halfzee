@@ -135,6 +135,9 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     }
 
     try {
+      // Stop any ongoing animations or movements
+      map.current?.stop();
+      
       clearMapElements();
 
       // Get route directions
@@ -184,15 +187,28 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       bounds.extend(endLocation);
       bounds.extend(equidistantPoint as [number, number]);
 
-      // Add padding to account for the input box (more padding on the left)
-      map.current.fitBounds(bounds, {
-        padding: {
-          top: 50,
-          bottom: 50,
-          left: 450, // Extra padding for the input box
-          right: 50
-        },
-        maxZoom: 15
+      // Stop any ongoing animations before fitting bounds
+      map.current.stop();
+
+      // Center the map on the midpoint first with an animation
+      map.current.easeTo({
+        center: equidistantPoint as [number, number],
+        zoom: 12,
+        duration: 1000,
+        easing: (t) => t * (2 - t), // Ease out quad
+        complete: () => {
+          // After centering, fit bounds to show all points
+          map.current?.fitBounds(bounds, {
+            padding: {
+              top: 50,
+              bottom: 50,
+              left: 450,
+              right: 50
+            },
+            maxZoom: 15,
+            duration: 1000
+          });
+        }
       });
 
       if (onMidpointFound) {
@@ -212,7 +228,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       });
     }
   };
-  
+
   useEffect(() => {
     if (!mapContainer.current) return;
 
