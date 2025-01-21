@@ -135,7 +135,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/restaurant%2Ccafe.json?` +
         `proximity=${point[0]},${point[1]}&` +
-        `radius=1000&` +
+        `radius=2000&` + // Increased radius to 2000 meters
         `limit=10&` +
         `types=poi&` +
         `access_token=${mapboxgl.accessToken}`
@@ -144,6 +144,16 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       const data = await response.json();
       console.log('Places API response:', data);
       
+      if (!data.features || data.features.length === 0) {
+        console.log('No places found within radius. Try increasing search radius or checking coordinates.');
+        toast({
+          title: "No Places Found",
+          description: "No restaurants or cafes were found near the midpoint. Try a different location.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Clear existing place markers
       placeMarkers.current.forEach(marker => marker.remove());
       placeMarkers.current = [];
@@ -153,8 +163,15 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         const coordinates = place.center;
         const name = place.text;
         const category = place.properties.category || '';
+        const address = place.properties.address || '';
         
-        console.log('Adding marker for place:', { name, category, coordinates });
+        console.log('Adding marker for place:', { 
+          name, 
+          category, 
+          coordinates,
+          address,
+          fullPlace: place // Log the full place object for debugging
+        });
 
         // Create custom marker element
         const el = document.createElement('div');
@@ -168,9 +185,13 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         el.style.backgroundSize = 'cover';
         el.style.cursor = 'pointer';
 
-        // Create popup
+        // Create popup with more detailed information
         const popup = new mapboxgl.Popup({ offset: 25 })
-          .setHTML(`<strong>${name}</strong><br>${category}`);
+          .setHTML(`
+            <strong>${name}</strong><br>
+            ${category ? `${category}<br>` : ''}
+            ${address ? `${address}<br>` : ''}
+          `);
 
         // Create and store marker
         const marker = new mapboxgl.Marker(el)
