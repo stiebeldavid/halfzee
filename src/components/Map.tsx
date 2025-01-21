@@ -40,17 +40,17 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
 
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-      // Initialize geocoders
+      // Initialize geocoders with the correct type
       startGeocoderRef.current = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
-        mapboxgl: mapboxgl,
+        mapboxgl: (mapboxgl as any),
         marker: false,
         placeholder: 'Enter start location'
       });
 
       endGeocoderRef.current = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
-        mapboxgl: mapboxgl,
+        mapboxgl: (mapboxgl as any),
         marker: false,
         placeholder: 'Enter end location'
       });
