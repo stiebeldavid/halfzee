@@ -1,6 +1,6 @@
 import mapboxgl from 'mapbox-gl';
 import { toast } from "@/components/ui/use-toast";
-import { Coffee, Tree, ShoppingBag } from 'lucide-react';
+import { Coffee, Trees, ShoppingBag } from 'lucide-react';
 
 export const getDirections = async (
   start: [number, number], 
