@@ -13,14 +13,14 @@ const MapControls = ({ map, onStartLocationSelect, onEndLocationSelect }: MapCon
   useEffect(() => {
     const geocoderStart = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: window.mapboxgl || mapboxgl,
+      mapboxgl: mapboxgl,
       marker: false,
       placeholder: 'Enter start location'
     });
 
     const geocoderEnd = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: window.mapboxgl || mapboxgl,
+      mapboxgl: mapboxgl,
       marker: false,
       placeholder: 'Enter end location'
     });
