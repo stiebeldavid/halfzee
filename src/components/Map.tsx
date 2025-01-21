@@ -132,12 +132,14 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
   const searchNearbyPlaces = async (point: [number, number]) => {
     try {
       console.log('Searching for places near:', point);
+      
+      // Use proper category filters for restaurants and cafes
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/restaurant%2Ccafe.json?` +
         `proximity=${point[0]},${point[1]}&` +
-        `radius=2000&` + // Increased radius to 2000 meters
+        `radius=2000&` +
         `limit=10&` +
-        `types=poi&` +
+        `categories=restaurant,cafe,coffee_shop&` +
         `access_token=${mapboxgl.accessToken}`
       );
 
@@ -162,12 +164,20 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       data.features.forEach((place: any) => {
         const coordinates = place.center;
         const name = place.text;
-        const category = place.properties.category || '';
-        const address = place.properties.address || '';
+        
+        // Parse place details from the context and properties
+        const placeDetails = place.properties || {};
+        const category = placeDetails.category || 
+                        (place.place_type && place.place_type[0]) || 
+                        'venue';
+                        
+        // Get address from place_name by removing the common parts
+        const fullAddress = place.place_name;
+        const address = fullAddress.split(',')[0];
         
         console.log('Adding marker for place:', { 
           name, 
-          category, 
+          category,
           coordinates,
           address,
           fullPlace: place // Log the full place object for debugging
@@ -178,8 +188,14 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         el.className = 'place-marker';
         el.style.width = '20px';
         el.style.height = '20px';
-        el.style.backgroundImage = category.toLowerCase().includes('coffee') || 
-                                 name.toLowerCase().includes('starbucks') ?
+        
+        // Use different icons for coffee shops vs restaurants
+        const isCoffeeShop = 
+          category.toLowerCase().includes('coffee') || 
+          category.toLowerCase().includes('cafe') ||
+          name.toLowerCase().includes('starbucks');
+          
+        el.style.backgroundImage = isCoffeeShop ?
           'url(https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png)' :
           'url(https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png)';
         el.style.backgroundSize = 'cover';
@@ -190,7 +206,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
           .setHTML(`
             <strong>${name}</strong><br>
             ${category ? `${category}<br>` : ''}
-            ${address ? `${address}<br>` : ''}
+            ${address ? `${address}` : ''}
           `);
 
         // Create and store marker
