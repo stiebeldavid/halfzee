@@ -268,13 +268,18 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     map.current.stop();
 
     if (startLocation && endLocation) {
-      // If both locations are set, fit bounds to show both
-      const bounds = new mapboxgl.LngLatBounds(
-        [Math.min(startLocation[0], endLocation[0]), Math.min(startLocation[1], endLocation[1])],
-        [Math.max(startLocation[0], endLocation[0]), Math.max(startLocation[1], endLocation[1])]
-      );
+      // Create the southwest and northeast coordinates for the bounds
+      const sw: mapboxgl.LngLatLike = [
+        Math.min(startLocation[0], endLocation[0]),
+        Math.min(startLocation[1], endLocation[1])
+      ];
+      const ne: mapboxgl.LngLatLike = [
+        Math.max(startLocation[0], endLocation[0]),
+        Math.max(startLocation[1], endLocation[1])
+      ];
 
-      map.current.fitBounds(bounds, {
+      // Fit bounds with the correct argument structure
+      map.current.fitBounds([sw, ne], {
         padding: {
           top: 50,
           bottom: 50,
