@@ -379,7 +379,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       // Add one-time moveend listener for the first animation
       map.current.once('moveend', () => {
         // After centering, fit bounds to show all points
-        map.current?.fitBounds(bounds, {
+        map.current?.fitBounds([bounds.getSouthWest(), bounds.getNorthEast()], {
           padding: {
             top: 50,
             bottom: 50,
