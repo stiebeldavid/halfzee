@@ -261,47 +261,6 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     return R * c; // Distance in km
   };
 
-  const updateMapView = () => {
-    if (!map.current) return;
-
-    // Stop any ongoing animations
-    map.current.stop();
-
-    if (startLocation && endLocation) {
-      // Create the southwest and northeast coordinates for the bounds
-      const sw: mapboxgl.LngLatLike = [
-        Math.min(startLocation[0], endLocation[0]),
-        Math.min(startLocation[1], endLocation[1])
-      ];
-      const ne: mapboxgl.LngLatLike = [
-        Math.max(startLocation[0], endLocation[0]),
-        Math.max(startLocation[1], endLocation[1])
-      ];
-
-      // Fit bounds with the correct argument structure
-      map.current.fitBounds([sw, ne], {
-        padding: {
-          top: 50,
-          bottom: 50,
-          left: 450, // Larger padding on the left to account for the address input section
-          right: 50
-        },
-        maxZoom: 15,
-        duration: 1000
-      });
-    } else {
-      // If only one location is set, zoom to it
-      const location = startLocation || endLocation;
-      if (location) {
-        map.current.flyTo({
-          center: location,
-          zoom: 13,
-          duration: 1000
-        });
-      }
-    }
-  };
-
   const findMidpoint = async () => {
     if (!startLocation || !endLocation) {
       toast({
@@ -379,7 +338,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       // Add one-time moveend listener for the first animation
       map.current.once('moveend', () => {
         // After centering, fit bounds to show all points
-        map.current?.fitBounds([bounds.getSouthWest(), bounds.getNorthEast()], {
+        map.current?.fitBounds(bounds, {
           padding: {
             top: 50,
             bottom: 50,
@@ -472,26 +431,15 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
 
         // Handle location selections
         geocoderStart.on('result', (e) => {
+          console.log('Start location:', e.result);
           const coordinates = e.result.geometry.coordinates as [number, number];
           setStartLocation(coordinates);
-          updateMapView();
         });
 
         geocoderEnd.on('result', (e) => {
+          console.log('End location:', e.result);
           const coordinates = e.result.geometry.coordinates as [number, number];
           setEndLocation(coordinates);
-          updateMapView();
-        });
-
-        // Handle location clear events
-        geocoderStart.on('clear', () => {
-          setStartLocation(null);
-          updateMapView();
-        });
-
-        geocoderEnd.on('clear', () => {
-          setEndLocation(null);
-          updateMapView();
         });
       } catch (error) {
         console.error('Error initializing map:', error);
