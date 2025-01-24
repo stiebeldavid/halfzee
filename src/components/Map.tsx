@@ -5,6 +5,9 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Coffee, Utensils } from "lucide-react";
 
 interface MapProps {
   transportMode: string;
@@ -22,7 +25,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
   const [endLocation, setEndLocation] = useState<[number, number] | null>(null);
   const [midpoint, setMidpoint] = useState<[number, number] | null>(null);
   const currentMarker = useRef<mapboxgl.Marker | null>(null);
-  const placeMarkers = useRef<mapboxgl.Marker[]>([]);
+  const currentPopup = useRef<mapboxgl.Popup | null>(null);
   
   const getDirections = async (start: [number, number], end: [number, number]) => {
     try {
@@ -54,9 +57,11 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       currentMarker.current = null;
     }
 
-    // Remove all place markers
-    placeMarkers.current.forEach(marker => marker.remove());
-    placeMarkers.current = [];
+    // Remove existing popup
+    if (currentPopup.current) {
+      currentPopup.current.remove();
+      currentPopup.current = null;
+    }
   };
 
   const findEquidistantPoint = async (routeCoordinates: number[][]) => {
@@ -133,16 +138,14 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     try {
       console.log('Searching for places near:', point);
       
-      // Calculate a bounding box around the midpoint (roughly 2km radius)
-      const radius = 2; // 2 kilometers in decimal degrees (approximately)
+      const radius = 2;
       const bbox = [
-        point[0] - radius,  // min longitude
-        point[1] - radius,  // min latitude
-        point[0] + radius,  // max longitude
-        point[1] + radius   // max latitude
+        point[0] - radius,
+        point[1] - radius,
+        point[0] + radius,
+        point[1] + radius
       ].join(',');
 
-      // Use proper category filters for restaurants and cafes with bbox
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/restaurant%2Ccafe.json?` +
         `proximity=${point[0]},${point[1]}&` +
@@ -157,11 +160,7 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       console.log('Places API response:', data);
       
       if (!data.features || data.features.length === 0) {
-        console.log('No places found within radius. Search parameters:', {
-          point,
-          bbox,
-          categories: 'restaurant,cafe,coffee_shop'
-        });
+        console.log('No places found within radius');
         toast({
           title: "No Places Found",
           description: "No restaurants or cafes were found near the midpoint. Try a different location.",
@@ -170,67 +169,76 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         return;
       }
 
-      // Clear existing place markers
-      placeMarkers.current.forEach(marker => marker.remove());
-      placeMarkers.current = [];
-
-      // Add new markers for each place
+      // Create popup content
+      const popupContent = document.createElement('div');
+      popupContent.className = 'custom-popup';
+      
+      // Create React-like structure using DOM
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-lg shadow-lg w-[300px] max-h-[400px] overflow-hidden';
+      
+      const header = document.createElement('div');
+      header.className = 'p-4 border-b';
+      header.innerHTML = `
+        <h3 class="font-semibold">Midpoint Location</h3>
+        <p class="text-sm text-gray-500">Here are some places to meet nearby:</p>
+      `;
+      
+      const placesList = document.createElement('div');
+      placesList.className = 'divide-y max-h-[300px] overflow-y-auto';
+      
       data.features.forEach((place: any) => {
-        const coordinates = place.center;
         const name = place.text;
-        
-        // Parse place details from the context and properties
-        const placeDetails = place.properties || {};
-        const category = placeDetails.category || 
+        const category = place.properties?.category || 
                         (place.place_type && place.place_type[0]) || 
                         'venue';
-                        
-        // Get address from place_name by removing the common parts
-        const fullAddress = place.place_name;
-        const address = fullAddress.split(',')[0];
+        const address = place.place_name.split(',')[0];
         
-        console.log('Adding marker for place:', { 
-          name, 
-          category,
-          coordinates,
-          address,
-          fullPlace: place // Log the full place object for debugging
-        });
-
-        // Create custom marker element
-        const el = document.createElement('div');
-        el.className = 'place-marker';
-        el.style.width = '20px';
-        el.style.height = '20px';
+        const placeItem = document.createElement('div');
+        placeItem.className = 'p-3 hover:bg-gray-50';
         
-        // Use different icons for coffee shops vs restaurants
         const isCoffeeShop = 
           category.toLowerCase().includes('coffee') || 
           category.toLowerCase().includes('cafe') ||
           name.toLowerCase().includes('starbucks');
-          
-        el.style.backgroundImage = isCoffeeShop ?
-          'url(https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png)' :
-          'url(https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png)';
-        el.style.backgroundSize = 'cover';
-        el.style.cursor = 'pointer';
-
-        // Create popup with more detailed information
-        const popup = new mapboxgl.Popup({ offset: 25 })
-          .setHTML(`
-            <strong>${name}</strong><br>
-            ${category ? `${category}<br>` : ''}
-            ${address ? `${address}` : ''}
-          `);
-
-        // Create and store marker
-        const marker = new mapboxgl.Marker(el)
-          .setLngLat(coordinates)
-          .setPopup(popup)
-          .addTo(map.current!);
-
-        placeMarkers.current.push(marker);
+        
+        placeItem.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="text-blue-500">
+              ${isCoffeeShop ? 
+                '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-coffee"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>' : 
+                '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-utensils"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>'
+              }
+            </div>
+            <div>
+              <div class="font-medium">${name}</div>
+              <div class="text-sm text-gray-500">${address}</div>
+            </div>
+          </div>
+        `;
+        
+        placesList.appendChild(placeItem);
       });
+      
+      card.appendChild(header);
+      card.appendChild(placesList);
+      popupContent.appendChild(card);
+
+      // Remove any existing popup
+      if (currentPopup.current) {
+        currentPopup.current.remove();
+      }
+
+      // Create and add the new popup
+      currentPopup.current = new mapboxgl.Popup({
+        closeButton: true,
+        closeOnClick: false,
+        maxWidth: '320px',
+        offset: 25
+      })
+      .setLngLat(point)
+      .setDOMContent(popupContent)
+      .addTo(map.current!);
 
       toast({
         title: "Places Found",
@@ -246,7 +254,6 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     }
   };
 
-  // Helper function to calculate distance between two points
   const calculateDistance = (point1: [number, number], point2: number[]) => {
     const R = 6371; // Earth's radius in km
     const lat1 = point1[1] * Math.PI / 180;
@@ -272,12 +279,10 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     }
 
     try {
-      // Stop any ongoing animations
       map.current?.stop();
       
       clearMapElements();
 
-      // Get route directions
       const directionsData = await getDirections(startLocation, endLocation);
       if (!directionsData?.routes[0]) {
         toast({
@@ -288,11 +293,9 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         return;
       }
 
-      // Draw the route on the map
       const coordinates = directionsData.routes[0].geometry.coordinates;
       drawRoute(coordinates);
 
-      // Find the equidistant point along the route
       const equidistantPoint = await findEquidistantPoint(coordinates);
       
       if (!equidistantPoint || !map.current) {
@@ -306,7 +309,6 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
 
       setMidpoint(equidistantPoint as [number, number]);
 
-      // Add marker at midpoint
       const markerElement = document.createElement('div');
       markerElement.className = 'midpoint-marker';
       markerElement.style.width = '25px';
@@ -318,27 +320,21 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         .setLngLat(equidistantPoint as [number, number])
         .addTo(map.current);
 
-      // Search for nearby places
       await searchNearbyPlaces(equidistantPoint as [number, number]);
 
-      // Calculate bounds that include all points
-      const bounds = new mapboxgl.LngLatBounds(
-        [Math.min(startLocation[0], endLocation[0], equidistantPoint[0]), 
-         Math.min(startLocation[1], endLocation[1], equidistantPoint[1])],
-        [Math.max(startLocation[0], endLocation[0], equidistantPoint[0]),
-         Math.max(startLocation[1], endLocation[1], equidistantPoint[1])]
-      );
+      const bounds = new mapboxgl.LngLatBounds()
+        .extend(startLocation)
+        .extend(endLocation)
+        .extend(equidistantPoint);
 
-      // Stop any ongoing animations before fitting bounds
       map.current.stop();
-
-      // Remove any existing moveend listeners
       map.current.off('moveend');
 
-      // Add one-time moveend listener for the first animation
       map.current.once('moveend', () => {
-        // After centering, fit bounds to show all points
-        map.current?.fitBounds(bounds, {
+        map.current?.fitBounds([
+          [bounds.getWest(), bounds.getSouth()],
+          [bounds.getEast(), bounds.getNorth()]
+        ], {
           padding: {
             top: 50,
             bottom: 50,
@@ -350,12 +346,11 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
         });
       });
 
-      // Center the map on the midpoint first with an animation
       map.current.easeTo({
         center: equidistantPoint as [number, number],
         zoom: 12,
         duration: 1000,
-        easing: (t) => t * (2 - t) // Ease out quad
+        easing: (t) => t * (2 - t)
       });
 
       if (onMidpointFound) {
@@ -453,7 +448,6 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
     };
   }, []);
 
-  // Expose findMidpoint method to parent component
   useImperativeHandle(ref, () => ({
     findMidpoint
   }));
