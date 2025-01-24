@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import mapboxgl from 'mapbox-gl';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
@@ -164,11 +164,9 @@ const Map = forwardRef<MapRef, MapProps>(({ transportMode, onMidpointFound }, re
       const popup = new mapboxgl.Popup({ offset: 25 })
         .setLngLat(equidistantPoint as [number, number]);
       
-      // Render MidpointPopup component into the popup
-      ReactDOM.render(
-        <MidpointPopup places={places} />,
-        popupNode
-      );
+      // Create root and render MidpointPopup component
+      const root = createRoot(popupNode);
+      root.render(<MidpointPopup places={places} />);
       
       popup.setDOMContent(popupNode);
       popup.addTo(map.current);
