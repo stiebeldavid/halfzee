@@ -3,7 +3,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapControls } from "./map/MapControls";
+import { MapControls } from "./MapControls";
 
 interface MapProps {
   onLocationSelect: (location: { lat: number; lng: number }) => void;
@@ -40,7 +40,6 @@ export const Map: React.FC<MapProps> = ({ onLocationSelect, selectedLocations })
 
   useEffect(() => {
     if (!mapboxToken || !mapContainer.current) return;
-
     if (map.current) return;
 
     try {
@@ -87,19 +86,25 @@ export const Map: React.FC<MapProps> = ({ onLocationSelect, selectedLocations })
       markersRef.current.push(marker);
     });
 
-    // Calculate and show midpoint if we have exactly 2 locations
-    if (selectedLocations.length === 2) {
+    // Handle map zoom based on number of locations
+    if (selectedLocations.length === 1) {
+      // Zoom to single location
+      map.current.flyTo({
+        center: [selectedLocations[0].lng, selectedLocations[0].lat],
+        zoom: 13,
+        duration: 1000
+      });
+    } else if (selectedLocations.length === 2) {
+      // Calculate and show midpoint
       const [loc1, loc2] = selectedLocations;
       const midLng = (loc1.lng + loc2.lng) / 2;
       const midLat = (loc1.lat + loc2.lat) / 2;
       setMidpoint([midLng, midLat]);
 
-      // Remove existing midpoint marker if it exists
       if (midpointMarkerRef.current) {
         midpointMarkerRef.current.remove();
       }
 
-      // Create new midpoint marker
       const el = document.createElement("div");
       el.className = "midpoint-marker";
       el.style.backgroundColor = "#FF4444";
